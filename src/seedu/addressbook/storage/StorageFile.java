@@ -19,6 +19,9 @@ public class StorageFile {
 
     /** Default file path used if the user doesn't provide the file name. */
     public static final String DEFAULT_STORAGE_FILEPATH = "addressbook.txt";
+    public static final String MISSING_FILE_ERROR_MESSAGE = "Storage file is not found!";
+    private static boolean isFileExist = false;
+    		
 
     /* Note: Note the use of nested classes below.
      * More info https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html
@@ -39,6 +42,15 @@ public class StorageFile {
      */
     public static class StorageOperationException extends Exception {
         public StorageOperationException(String message) {
+            super(message);
+        }
+    }
+    
+    /**
+     * Signals that the storage file is missing/doesn't exist.
+     */
+    public static class MissingStorageException extends Exception {
+        public MissingStorageException(String message) {
             super(message);
         }
     }
@@ -95,7 +107,7 @@ public class StorageFile {
             final Marshaller marshaller = jaxbContext.createMarshaller();
             marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
             marshaller.marshal(toSave, fileWriter);
-
+            isFileExist = true;
         } catch (IOException ioe) {
             throw new StorageOperationException("Error writing to file: " + path);
         } catch (JAXBException jaxbe) {
@@ -108,16 +120,16 @@ public class StorageFile {
      *
      * @throws StorageOperationException if there were errors reading and/or converting data from file.
      */
-    public AddressBook load() throws StorageOperationException {
+    public AddressBook load() throws StorageOperationException, MissingStorageException {
         try (final Reader fileReader =
                      new BufferedReader(new FileReader(path.toFile()))) {
-
             final Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
             final AdaptedAddressBook loaded = (AdaptedAddressBook) unmarshaller.unmarshal(fileReader);
             // manual check for missing elements
             if (loaded.isAnyRequiredFieldMissing()) {
                 throw new StorageOperationException("File data missing some elements");
             }
+            isFileExist = true;
             return loaded.toModelType();
 
         /* Note: Here, we are using an exception to create the file if it is missing. However, we should minimize
@@ -127,6 +139,9 @@ public class StorageFile {
 
         // create empty file if not found
         } catch (FileNotFoundException fnfe) {
+        	if (isFileExist) {
+        		throw new MissingStorageException(MISSING_FILE_ERROR_MESSAGE);
+        	}
             final AddressBook empty = new AddressBook();
             save(empty);
             return empty;
