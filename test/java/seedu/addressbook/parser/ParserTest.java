@@ -229,7 +229,7 @@ public class ParserTest {
     @Test
     public void addCommand_validPersonData_parsedCorrectly() {
         final Person testPerson = generateTestPerson();
-        final String input = convertPersonToAddCommandString(testPerson);
+        String input = convertPersonToAddCommandString(testPerson);
         final AddCommand result = parseAndAssertCommandType(input, AddCommand.class);
         assertEquals(result.getPerson(), testPerson);
     }
